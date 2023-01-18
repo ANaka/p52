@@ -246,17 +246,40 @@ class RingSquares {
 // }
 
 
-// this feels very dumb im sure there is a better way to do this
-const numRingPointsParams = [30, 60, 80]
-const radiusParams = [200, 150, 100]
-const squareSizeParams = [30, 10, 60]
 
 
-let numParamSets = numRingPointsParams.length;
+
+
+
 let rings = [];
-
+let lerpFunctions = [];
+let rotationOffsetFunctions = [];
 function setup() {
   createCanvas(600, 600);
+
+  //
+  // make radius in increments of 10
+  const radiusParams = Array.from({length: 26}, (_,i) => i*15 + 30);
+
+  // iterate through the radius params and create points proportional to the circumference
+  const numRingPointsParams = radiusParams.map((r) => floor(2 * PI * r / 15));
+
+  // all size 10
+  const squareSizeParams = Array.from({length: radiusParams.length}, (_,i) => 5);
+
+  
+  for (let i = 0; i < numRingPointsParams.length; i++) {
+    let _lerpFunction = (t) => map(sin(t * 0.14 + i * 0.35), -1, 1, 0, 1);
+    lerpFunctions.push(_lerpFunction);
+  }
+
+  for (let i = 0; i < numRingPointsParams.length; i++) {
+    let _rotationOffsetFunction = (t) => (t * (0.005 + i * 0.0002));
+    rotationOffsetFunctions.push(_rotationOffsetFunction);
+  }
+
+  let numParamSets = numRingPointsParams.length;
+  
 
   // make a ring for each set of parameters
   
@@ -282,14 +305,14 @@ let t = 0;
 function draw() {
   clear();
   background(0); // Set background color
-  rotationOffset += 0.01;
 
-  t += 0.04;
+  t += 1;
 
   // interpolate using sin(t) to get a smooth transition
   
   for (let i = 0; i < rings.length; i++) {
-    let lerp_amount = map(sin(t + i*0.05), -1, 1, 0, 1);
+    let lerp_amount = lerpFunctions[i](t);
+    let rotationOffset = rotationOffsetFunctions[i](t);
     rings[i].generatePoints(rotationOffset);
     rings[i].generateSquares(rotationOffset);
     rings[i].interpolateLines(lerp_amount);
