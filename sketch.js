@@ -183,83 +183,26 @@ class RingSquares {
   
 }
 
-// const numRingPoints = 80;
-// const radius = 200;
-// let totalNumLines = numRingPoints * 4;
-// create a random order of totalNumLines
-// let lineOrder = [];
-// for (let i = 0; i < totalNumLines; i++) {
-//   lineOrder.push(i);
-// }
-
-// function setup() {
-//   createCanvas(600, 600);
-//   // shuffle the order
-//   shuffle(lineOrder, true)
-// }
-
-
-
-// let rotationOffset = 0;
-// let t = 0;
-
-// function draw() {
-//   clear();
-//   background(0); // Set background color
-//   rotationOffset += 0.01;
-//   t += 0.01;
-//   let centerX = width/2;
-//   let centerY = height/2;
-//   ring = new RingPoints(numRingPoints, radius, centerX, centerY, rotationOffset);
-//   let allLines = [];
-//   for (let i = 0; i < ring.points.length; i++) {
-//     let centerX = ring.points[i][0];
-//     let centerY = ring.points[i][1];
-//     stroke(255);
-//     // point(centerX, centerY);
-//     let squareSize = 10;
-//     let rotationAngle = map(i, 0, ring.points.length, 0, TWO_PI) + rotationOffset;
-//     let square = new Square(centerX, centerY, squareSize, rotationAngle);
-//     allLines = allLines.concat(square.lines);
-//   }
-
-//   // interpolate using sin(t) to get a smooth transition
-//   let lerp_amount = map(sin(t), -1, 1, 0, 1);
-
-//   for (let i = 0; i < allLines.length; i++) {
-//     let line1_x1 = allLines[lineOrder[i]][0];
-//     let line1_y1 = allLines[lineOrder[i]][1];
-//     let line1_x2 = allLines[lineOrder[i]][2];
-//     let line1_y2 = allLines[lineOrder[i]][3];
-//     let line2_x1 = allLines[lineOrder[(i+1) % allLines.length]][0];
-//     let line2_y1 = allLines[lineOrder[(i+1) % allLines.length]][1];
-//     let line2_x2 = allLines[lineOrder[(i+1) % allLines.length]][2];
-//     let line2_y2 = allLines[lineOrder[(i+1) % allLines.length]][3];
-//     let x1 = lerp(line1_x1, line2_x1, lerp_amount);
-//     let y1 = lerp(line1_y1, line2_y1, lerp_amount);
-//     let x2 = lerp(line1_x2, line2_x2, lerp_amount);
-//     let y2 = lerp(line1_y2, line2_y2, lerp_amount);
-//     stroke(255);
-//     line(x1, y1, x2, y2);
-//   }
-
-// }
-
-
-
-
-
-
 
 let rings = [];
 let lerpFunctions = [];
 let rotationOffsetFunctions = [];
+let capturer;
+let capturing = false;
+let startMillis;
+const captureDurationMillis = 10000; // Capture for 3 seconds
+const fps = 30;
+
+const totalFrames = 3000; // 5 seconds * 30 fps
+
+
 function setup() {
   createCanvas(600, 600);
+  frameRate(fps);
 
   //
   // make radius in increments of 10
-  const radiusParams = Array.from({length: 26}, (_,i) => i*15 + 30);
+  const radiusParams = Array.from({length: 27}, (_,i) => i*18 + 30);
 
   // iterate through the radius params and create points proportional to the circumference
   const numRingPointsParams = radiusParams.map((r) => floor(2 * PI * r / 15));
@@ -268,8 +211,9 @@ function setup() {
   const squareSizeParams = Array.from({length: radiusParams.length}, (_,i) => 5);
 
   
+  
   for (let i = 0; i < numRingPointsParams.length; i++) {
-    let _lerpFunction = (t) => map(sin(t * 0.14 + i * 0.35), -1, 1, 0, 1);
+    let _lerpFunction = (t) => map(sin(t * 0.15 + i * 0.35), -1, 1, 0, 1);
     lerpFunctions.push(_lerpFunction);
   }
 
@@ -295,19 +239,33 @@ function setup() {
     // rings[i].shuffleLineOrder();
     rings[i].shuffleLineOrderWithin4();
   }
+
+  // Initialize frame counter
+  frameCounter = 0;
+
+  //gif
+  // capturer = new CCapture({
+  //   format: 'gif',
+  //   workersPath: 'node_modules/ccapture.js/src/',
+  //   framerate: fps,
+  // });
+
+  // png
+  capturer = new CCapture({ format: 'png', framerate: fps });
 }
 
 
 
 let rotationOffset = 0;
-let t = 0;
+let frameCount = 0;
 
 function draw() {
   clear();
   background(0); // Set background color
 
-  t += 1;
+  frameCount += 1;
 
+  t = map(frameCount % totalFrames, 0, totalFrames, 0, TWO_PI*20 / 0.15); 
   // interpolate using sin(t) to get a smooth transition
   
   for (let i = 0; i < rings.length; i++) {
@@ -317,5 +275,21 @@ function draw() {
     rings[i].generateSquares(rotationOffset);
     rings[i].interpolateLines(lerp_amount);
     // rings[i].drawLines();
+  }
+
+  if (!capturing && millis() > 2000) { // Wait 2 seconds before start capturing
+    capturer.start();
+    startMillis = millis();
+    capturing = true;
+  }
+
+  if (capturing && millis() - startMillis > captureDurationMillis) {
+    capturer.stop();
+    capturer.save();
+    noLoop();
+  }
+
+  if (capturing) {
+    capturer.capture(document.getElementById('defaultCanvas0'));
   }
 }
